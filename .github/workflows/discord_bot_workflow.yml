@@ -1,9 +1,8 @@
 name: Discord Bot
 
 on:
-  schedule:
-    - cron: '0 * * * *' 
-  workflow_dispatch:
+  repository_dispatch:
+    types: [discord_event]
 
 jobs:
   build:
@@ -27,3 +26,6 @@ jobs:
         run: python main.py
         env:
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          WELCOME_WEBHOOK_URL: ${{ secrets.WELCOME_WEBHOOK_URL }}
+          RULES_WEBHOOK_URL: ${{ secrets.RULES_WEBHOOK_URL }}
+          LOGS_WEBHOOK_URL: ${{ secrets.LOGS_WEBHOOK_URL }}
