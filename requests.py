@@ -2,7 +2,7 @@ import requests
 import os
 
 # Set up the GitHub repository dispatch URL
-repository_dispatch_url = f"https://api.github.com/repos/{os.getenv('GITHUB_REPOSITORY')}/dispatches"
+repository_dispatch_url = f"https://api.github.com/repos/{os.getenv('zeropse/KnightBot')}/dispatches"
 
 # Trigger the workflow
 def trigger_workflow():
