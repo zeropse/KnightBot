@@ -1,3 +1,0 @@
-discord
-flask
-python-dotenv
