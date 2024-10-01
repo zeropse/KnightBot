@@ -1,5 +1,10 @@
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const { config } = require('dotenv');
+const {
+    logUserAcceptanceToDatabase,
+    removeUserAcceptanceFromDatabase,
+    loadAcceptedUsers,
+} = require('./database'); // Import the database functions
 
 // Load environment variables
 config();
@@ -18,6 +23,7 @@ if (!TOKEN || !ROLE_ID || !RULES_CHANNEL_ID || !LOGS_CHANNEL_ID || !WELCOME_CHAN
     process.exit(1);
 }
 
+// Bot setup
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -88,6 +94,8 @@ client.on('messageReactionAdd', async (reaction, user) => {
                 if (logsChannel) {
                     await sendMessageWithRetry(logsChannel, `${member} has accepted the rules and gained access to the server.`);
                 }
+                // Log to Supabase
+                await logUserAcceptanceToDatabase(user.id, guild.id);
             }
         } catch (error) {
             console.error(`Error adding role: ${error.message}`);
@@ -109,6 +117,8 @@ client.on('messageReactionRemove', async (reaction, user) => {
                 if (logsChannel) {
                     await sendMessageWithRetry(logsChannel, `${member} has lost access to the server due to removing reaction.`);
                 }
+                // Remove from Supabase
+                await removeUserAcceptanceFromDatabase(user.id, guild.id);
             }
         } catch (error) {
             console.error(`Error removing role: ${error.message}`);
@@ -131,4 +141,4 @@ process.on('SIGINT', shutdownBot);
 process.on('SIGTERM', shutdownBot);
 
 // Start Bot
-client.login(TOKEN);
+client.login(TOKEN).then(() => loadAcceptedUsers(client));
