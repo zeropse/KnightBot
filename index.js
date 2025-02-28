@@ -49,6 +49,7 @@ client.on("guildMemberAdd", async (member) => {
           `💬 Feel free to introduce yourself and have a great time!`,
         0x3498db,
         [],
+        "Thank you for joining the server!",
         member.guild.iconURL()
       );
 
@@ -61,45 +62,15 @@ client.on("guildMemberAdd", async (member) => {
   }
 });
 
-client.on("messageReactionAdd", async (reaction, user) => {
-  if (user.bot) return;
-
-  if (
-    reaction.message.channel.id === CONFIG.RULES_CHANNEL_ID &&
-    reaction.message.id === CONFIG.RULES_MESSAGE_ID &&
-    reaction.emoji.name === "✅"
-  ) {
-    const guild = reaction.message.guild;
-    try {
-      const member = await guild.members.fetch(user.id);
-      const role = guild.roles.cache.get(CONFIG.ROLE_ID);
-
-      if (role) {
-        await member.roles.add(role);
-
-        const logsChannel = guild.channels.cache.get(CONFIG.LOGS_CHANNEL_ID);
-        if (logsChannel) {
-          const embed = createEmbed(
-            "✅ Rules Accepted",
-            `${member} has accepted the rules and gained access.`,
-            0x2ecc71,
-            [],
-            "Moderation System",
-            member.user.displayAvatarURL()
-          );
-
-          await sendMessageWithRetry(logsChannel, embed);
-        }
-      } else {
-        console.warn(`Role (${CONFIG.ROLE_ID}) not found.`);
-      }
-    } catch (error) {
-      console.error(`Error adding role: ${error.message}`);
-    }
-  }
+client.on("messageReactionAdd", (reaction, user) => {
+  client.emit("messageReactionUpdate", reaction, user, true);
 });
 
-client.on("messageReactionRemove", async (reaction, user) => {
+client.on("messageReactionRemove", (reaction, user) => {
+  client.emit("messageReactionUpdate", reaction, user, false);
+});
+
+client.on("messageReactionUpdate", async (reaction, user, isAdding) => {
   if (user.bot) return;
 
   if (
@@ -112,27 +83,32 @@ client.on("messageReactionRemove", async (reaction, user) => {
       const member = await guild.members.fetch(user.id);
       const role = guild.roles.cache.get(CONFIG.ROLE_ID);
 
-      if (role && member.roles.cache.has(CONFIG.ROLE_ID)) {
-        await member.roles.remove(role);
-
-        const logsChannel = guild.channels.cache.get(CONFIG.LOGS_CHANNEL_ID);
-        if (logsChannel) {
-          const embed = createEmbed(
-            "❌ Rules Unaccepted",
-            `${member} has removed their reaction and lost access.`,
-            0xe74c3c,
-            [],
-            "Moderation System",
-            member.user.displayAvatarURL()
-          );
-
-          await sendMessageWithRetry(logsChannel, embed);
-        }
-      } else if (!role) {
+      if (!role) {
         console.warn(`Role (${CONFIG.ROLE_ID}) not found.`);
+        return;
+      }
+
+      if (isAdding) {
+        await member.roles.add(role);
+      } else if (member.roles.cache.has(CONFIG.ROLE_ID)) {
+        await member.roles.remove(role);
+      }
+
+      const logsChannel = guild.channels.cache.get(CONFIG.LOGS_CHANNEL_ID);
+      if (logsChannel) {
+        const embed = createEmbed(
+          isAdding ? "✅ Rules Accepted" : "❌ Rules Unaccepted",
+          `${member} has ${isAdding ? "accepted" : "removed"} the rules.`,
+          isAdding ? 0x2ecc71 : 0xe74c3c,
+          [],
+          "Moderation System",
+          member.user.displayAvatarURL()
+        );
+
+        await sendMessageWithRetry(logsChannel, embed);
       }
     } catch (error) {
-      console.error(`Error removing role: ${error.message}`);
+      console.error(`Error updating role: ${error.message}`);
     }
   }
 });
