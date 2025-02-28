@@ -10,14 +10,14 @@ const { config } = require("dotenv");
 // Load environment variables
 config();
 
-const CONFIG = {
+const CONFIG = Object.freeze({
   TOKEN: process.env.BOT_TOKEN,
   ROLE_ID: process.env.ROLE_ID,
   RULES_CHANNEL_ID: process.env.RULES_CHANNEL_ID,
   LOGS_CHANNEL_ID: process.env.LOGS_CHANNEL_ID,
   WELCOME_CHANNEL_ID: process.env.WELCOME_CHANNEL_ID,
   RULES_MESSAGE_ID: process.env.RULES_MESSAGE_ID,
-};
+});
 
 const validateConfig = () => {
   const missingVars = Object.entries(CONFIG)
@@ -26,18 +26,17 @@ const validateConfig = () => {
 
   if (missingVars.length > 0) {
     console.error(
-      `Missing required environment variables: ${missingVars.join(
-        ", "
-      )}. Exiting...`
+      `\n🚨 Missing required environment variables:\n - ${missingVars.join(
+        "\n - "
+      )}\nExiting...`
     );
     return false;
   }
-
   return true;
 };
 
-const createClient = () => {
-  return new Client({
+const createClient = () =>
+  new Client({
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMembers,
@@ -47,7 +46,6 @@ const createClient = () => {
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction],
   });
-};
 
 const sendMessageWithRetry = async (
   channel,
@@ -58,25 +56,25 @@ const sendMessageWithRetry = async (
   for (let i = 0; i < retries; i++) {
     try {
       if (!channel) {
-        console.error("Channel not found. Skipping message send.");
+        console.error("❌ Channel not found. Skipping message send.");
         return;
       }
 
-      if (typeof content === "string") {
-        await channel.send({ content });
-      } else {
-        await channel.send({ embeds: [content] });
-      }
-
+      await channel.send(
+        typeof content === "string" ? { content } : { embeds: [content] }
+      );
       return;
     } catch (error) {
-      console.error(`Failed to send message: ${error.message}`);
-      if (i < retries - 1) {
+      console.error(
+        `⚠️ Failed to send message in ${channel?.id || "unknown"}: ${
+          error.message
+        }`
+      );
+      if (i < retries - 1)
         await new Promise((resolve) => setTimeout(resolve, delay));
-      }
     }
   }
-  console.error("Failed to send message after several retries.");
+  console.error("❌ Failed to send message after multiple retries.");
 };
 
 const createEmbed = (
@@ -93,16 +91,38 @@ const createEmbed = (
     .setColor(color)
     .setFooter({ text: footer });
 
-  if (fields.length > 0) {
-    embed.addFields(fields);
-  }
-
-  if (thumbnail) {
-    embed.setThumbnail(thumbnail);
-  }
+  if (fields.length) embed.addFields(fields);
+  if (thumbnail) embed.setThumbnail(thumbnail);
 
   return embed;
 };
+
+// Specialized Embed Creators
+const createBotStatusEmbed = (title, description, color) =>
+  createEmbed(title, description, color);
+
+const createWelcomeEmbed = (member, rulesLink) =>
+  createEmbed(
+    "🎉 Welcome to the Server!",
+    `Hey ${member}, we're thrilled to have you here! 🎈\n\n📜 **Review our rules:** [Click here](${rulesLink})\n\n💬 Introduce yourself and have fun!`,
+    0x3498db,
+    [],
+    "Thank you for joining!",
+    member.guild.iconURL()
+  );
+
+const createRulesEmbed = (member, isAdding) =>
+  createEmbed(
+    isAdding ? "✅ Rules Accepted" : "❌ Rules Unaccepted",
+    `${member} has ${isAdding ? "accepted" : "removed"} the rules.`,
+    isAdding ? 0x2ecc71 : 0xe74c3c,
+    [],
+    "Moderation System",
+    member.user.displayAvatarURL()
+  );
+
+const createShutdownEmbed = () =>
+  createEmbed("🔴 Bot Shutdown", "The bot is shutting down...", 0xff0000);
 
 module.exports = {
   CONFIG,
@@ -110,4 +130,8 @@ module.exports = {
   createClient,
   sendMessageWithRetry,
   createEmbed,
+  createBotStatusEmbed,
+  createWelcomeEmbed,
+  createRulesEmbed,
+  createShutdownEmbed,
 };
