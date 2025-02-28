@@ -1,6 +1,11 @@
-const { Client, GatewayIntentBits, Partials } = require("discord.js");
+const {
+  Client,
+  GatewayIntentBits,
+  Partials,
+  EmbedBuilder,
+} = require("discord.js");
+
 const { config } = require("dotenv");
-const path = require("path");
 
 // Load environment variables
 config();
@@ -52,7 +57,17 @@ const sendMessageWithRetry = async (
 ) => {
   for (let i = 0; i < retries; i++) {
     try {
-      await channel.send(content);
+      if (!channel) {
+        console.error("Channel not found. Skipping message send.");
+        return;
+      }
+
+      if (typeof content === "string") {
+        await channel.send({ content });
+      } else {
+        await channel.send({ embeds: [content] });
+      }
+
       return;
     } catch (error) {
       console.error(`Failed to send message: ${error.message}`);
@@ -64,9 +79,35 @@ const sendMessageWithRetry = async (
   console.error("Failed to send message after several retries.");
 };
 
+const createEmbed = (
+  title,
+  description,
+  color = 0x0099ff,
+  fields = [],
+  footer = "Made by zeropse",
+  thumbnail = null
+) => {
+  const embed = new EmbedBuilder()
+    .setTitle(title)
+    .setDescription(description)
+    .setColor(color)
+    .setFooter({ text: footer });
+
+  if (fields.length > 0) {
+    embed.addFields(fields);
+  }
+
+  if (thumbnail) {
+    embed.setThumbnail(thumbnail);
+  }
+
+  return embed;
+};
+
 module.exports = {
   CONFIG,
   validateConfig,
   createClient,
   sendMessageWithRetry,
+  createEmbed,
 };

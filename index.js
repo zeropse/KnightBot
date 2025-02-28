@@ -3,6 +3,7 @@ const {
   validateConfig,
   createClient,
   sendMessageWithRetry,
+  createEmbed,
 } = require("./config");
 
 if (!validateConfig()) {
@@ -17,10 +18,16 @@ client.once("ready", async () => {
   try {
     const logsChannel = client.channels.cache.get(CONFIG.LOGS_CHANNEL_ID);
     if (logsChannel) {
-      await sendMessageWithRetry(
-        logsChannel,
-        `🔄 The bot has started and is online!`
+      const embed = createEmbed(
+        "✅ Bot Online",
+        "The bot has successfully started and is now online!",
+        0x00ff00,
+        [],
+        "Made by zeropse",
+        client.user.displayAvatarURL()
       );
+
+      await sendMessageWithRetry(logsChannel, embed);
     } else {
       console.warn(`Logs channel (${CONFIG.LOGS_CHANNEL_ID}) not found.`);
     }
@@ -33,18 +40,19 @@ client.on("guildMemberAdd", async (member) => {
   try {
     const welcomeChannel = client.channels.cache.get(CONFIG.WELCOME_CHANNEL_ID);
     if (welcomeChannel) {
-      const serverName = member.guild.name;
-      const rulesChannelLink = `<#${CONFIG.RULES_CHANNEL_ID}>`;
       const rulesMessageLink = `https://discord.com/channels/${member.guild.id}/${CONFIG.RULES_CHANNEL_ID}/${CONFIG.RULES_MESSAGE_ID}`;
 
-      await sendMessageWithRetry(
-        welcomeChannel,
-        `🎉 Welcome ${member} to **${serverName}**! 🎉\n\n` +
-          `We're thrilled to have you here!\n\n` +
-          `Please take a moment to review our rules: ${rulesChannelLink}.\n\n` +
-          `You can also view the specific rules list here: [Rules Message](${rulesMessageLink}).\n\n` +
-          `Enjoy your stay and have fun! 🎈`
+      const embed = createEmbed(
+        "🎉 Welcome to the Server!",
+        `Hey ${member}, we're thrilled to have you here! 🎈\n\n` +
+          `📜 **Please review our rules:** [Click here](${rulesMessageLink})\n\n` +
+          `💬 Feel free to introduce yourself and have a great time!`,
+        0x3498db,
+        [],
+        member.guild.iconURL()
       );
+
+      await sendMessageWithRetry(welcomeChannel, embed);
     } else {
       console.warn(`Welcome channel (${CONFIG.WELCOME_CHANNEL_ID}) not found.`);
     }
@@ -71,10 +79,16 @@ client.on("messageReactionAdd", async (reaction, user) => {
 
         const logsChannel = guild.channels.cache.get(CONFIG.LOGS_CHANNEL_ID);
         if (logsChannel) {
-          await sendMessageWithRetry(
-            logsChannel,
-            `${member} has accepted the rules and gained access to the server.`
+          const embed = createEmbed(
+            "✅ Rules Accepted",
+            `${member} has accepted the rules and gained access.`,
+            0x2ecc71,
+            [],
+            "Moderation System",
+            member.user.displayAvatarURL()
           );
+
+          await sendMessageWithRetry(logsChannel, embed);
         }
       } else {
         console.warn(`Role (${CONFIG.ROLE_ID}) not found.`);
@@ -103,10 +117,16 @@ client.on("messageReactionRemove", async (reaction, user) => {
 
         const logsChannel = guild.channels.cache.get(CONFIG.LOGS_CHANNEL_ID);
         if (logsChannel) {
-          await sendMessageWithRetry(
-            logsChannel,
-            `${member} has lost access to the server due to removing reaction.`
+          const embed = createEmbed(
+            "❌ Rules Unaccepted",
+            `${member} has removed their reaction and lost access.`,
+            0xe74c3c,
+            [],
+            "Moderation System",
+            member.user.displayAvatarURL()
           );
+
+          await sendMessageWithRetry(logsChannel, embed);
         }
       } else if (!role) {
         console.warn(`Role (${CONFIG.ROLE_ID}) not found.`);
@@ -122,7 +142,13 @@ const shutdownBot = async () => {
   try {
     const logsChannel = client.channels.cache.get(CONFIG.LOGS_CHANNEL_ID);
     if (logsChannel) {
-      await sendMessageWithRetry(logsChannel, `🔴 The bot is shutting down...`);
+      const embed = createEmbed(
+        "🔴 Bot Shutdown",
+        "The bot is shutting down...",
+        0xff0000
+      );
+
+      await sendMessageWithRetry(logsChannel, embed);
     }
     await client.destroy();
   } catch (error) {
@@ -134,15 +160,6 @@ const shutdownBot = async () => {
 
 process.on("SIGINT", shutdownBot);
 process.on("SIGTERM", shutdownBot);
-
-process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
-  shutdownBot();
-});
-
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
-});
 
 client.login(CONFIG.TOKEN).catch((error) => {
   console.error(`Failed to login: ${error.message}`);
