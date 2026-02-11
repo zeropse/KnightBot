@@ -1,5 +1,7 @@
 # KnightBot
 
+![KnightBot Image](assets/image.jpg)
+
 This is a Discord bot built using `discord.js` that manages user interactions, including welcoming new members and handling role assignments based on emoji reactions.
 
 ## Features
